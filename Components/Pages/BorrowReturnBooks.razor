@@ -1,0 +1,286 @@
+﻿@page "/Borrow/Return"
+
+<div class="container">
+    <div class="header">
+        <h1>📚 Borrow and Return Books</h1>
+        <p>Manage your library effectively by adding members, books, and tracking borrowed items.</p>
+    </div>
+
+    <div class="content">
+        <!-- Add Member  Section -->
+        <div class="card card-cream">
+            <h2>Add a Member</h2>
+            <form>
+                <input type="text" placeholder="Enter Member Name" @bind="NewMemberName" />
+                <button type="button" class="btn btn-primary" @onclick="AddMember">Add Member</button>
+            </form>
+        </div>
+
+        <!-- Add Book Section -->
+        <div class="card card-cream">
+            <h2>Add a Book</h2>
+            <form>
+                <div class="form-group">
+                    <input type="text" placeholder="Enter Book Title" @bind="NewBookTitle" />
+                </div>
+                <div class="form-group">
+                    <input type="text" placeholder="Enter Author Name" @bind="NewBookAuthor" />
+                </div>
+                <div class="form-group">
+                    <input type="text" placeholder="Enter ISBN" @bind="NewBookISBN" />
+                </div>
+                <button type="button" class="btn btn-primary" @onclick="AddBook">Add Book</button>
+            </form>
+        </div>
+
+        <!-- Borrow Section -->
+        <div class="card card-cream">
+            <h2>Borrow a Book</h2>
+            <form>
+                <select @bind="SelectedMemberId">
+                    <option value="">-- Select Member --</option>
+                    @foreach (var member in Members)
+                    {
+                        <option value="@member.Id">@member.Name</option>
+                    }
+                </select>
+                <select @bind="SelectedBookId">
+                    <option value="">-- Select Book --</option>
+                    @foreach (var book in Books)
+                    {
+                        <option value="@book.Id">@book.Title</option>
+                    }
+                </select>
+                <input type="date" @bind="BorrowDate" />
+                <input type="date" @bind="DueDate" />
+                <button type="button" class="btn btn-primary" @onclick="BorrowBook">Borrow Book</button>
+            </form>
+        </div>
+
+        <!-- Return Section -->
+        <div class="card card-cream">
+            <h2>Return a Book</h2>
+            <form>
+                <input type="text" placeholder="Search by Member or Book Name" @bind="SearchQuery" />
+                <button type="button" class="btn btn-primary" @onclick="SearchBorrowedBooks">Search</button>
+
+                <ul>
+                    @if (BorrowedBooks.Any())
+                    {
+                        @foreach (var borrowed in BorrowedBooks)
+                        {
+                            <li>
+                                <span>@borrowed.MemberName borrowed "<strong>@borrowed.BookTitle</strong>" (Due: @borrowed.DueDate.ToShortDateString())</span>
+                                <button type="button" class="btn btn-danger" @onclick="() => ReturnBook(borrowed.Id)">Return</button>
+                            </li>
+                        }
+                    }
+                    else
+                    {
+                        <li>No borrowed books found.</li>
+                    }
+                </ul>
+            </form>
+        </div>
+    </div>
+</div>
+
+@code {
+
+    //todo move to seperate class
+    private List<Member> Members { get; set; } = new();
+    private List<Book> Books { get; set; } = new();
+    private List<BorrowedBook> BorrowedBooks { get; set; } = new();
+
+    private string NewMemberName { get; set; } = string.Empty;
+    private string NewBookTitle { get; set; } = string.Empty;
+    private string NewBookAuthor { get; set; } = string.Empty;
+    private string NewBookISBN { get; set; } = string.Empty;
+    private string SelectedMemberId { get; set; } = string.Empty;
+    private string SelectedBookId { get; set; } = string.Empty;
+    private string SearchQuery { get; set; } = string.Empty;
+
+    private DateTime BorrowDate { get; set; } = DateTime.Now;
+    private DateTime DueDate { get; set; } = DateTime.Now.AddDays(14);
+
+    private void AddMember()
+    {
+        if (!string.IsNullOrWhiteSpace(NewMemberName))
+        {
+            Members.Add(new Member { Id = Guid.NewGuid().ToString(), Name = NewMemberName.Trim() });
+            NewMemberName = string.Empty;
+        }
+    }
+
+    private void AddBook()
+    {
+        if (!string.IsNullOrWhiteSpace(NewBookTitle) && !string.IsNullOrWhiteSpace(NewBookAuthor) && !string.IsNullOrWhiteSpace(NewBookISBN))
+        {
+            Books.Add(new Book { Id = Guid.NewGuid().ToString(), Title = NewBookTitle.Trim(), Author = NewBookAuthor.Trim(), ISBN = NewBookISBN.Trim() });
+            NewBookTitle = string.Empty;
+            NewBookAuthor = string.Empty;
+            NewBookISBN = string.Empty;
+        }
+    }
+
+    private void BorrowBook()
+    {
+        if (!string.IsNullOrWhiteSpace(SelectedMemberId) && !string.IsNullOrWhiteSpace(SelectedBookId))
+        {
+            var member = Members.FirstOrDefault(m => m.Id == SelectedMemberId);
+            var book = Books.FirstOrDefault(b => b.Id == SelectedBookId);
+            if (member != null && book != null)
+            {
+                BorrowedBooks.Add(new BorrowedBook
+                    {
+                        Id = Guid.NewGuid().ToString(),
+                        MemberName = member.Name,
+                        BookTitle = book.Title,
+                        DueDate = DueDate
+                    });
+            }
+        }
+    }
+
+    private void SearchBorrowedBooks()
+    {
+        BorrowedBooks = BorrowedBooks
+            .Where(b => b.MemberName.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase) ||
+                        b.BookTitle.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+    }
+
+    private void ReturnBook(string borrowedBookId)
+    {
+        var borrowedBook = BorrowedBooks.FirstOrDefault(b => b.Id == borrowedBookId);
+        if (borrowedBook != null)
+        {
+            BorrowedBooks.Remove(borrowedBook);
+        }
+    }
+
+    private class Member
+    {
+        public string Id { get; set; }
+        public string Name { get; set; }
+    }
+
+    private class Book
+    {
+        public string Id { get; set; }
+        public string Title { get; set; }
+        public string Author { get; set; }
+        public string ISBN { get; set; }
+    }
+
+    private class BorrowedBook
+    {
+        public string Id { get; set; }
+        public string MemberName { get; set; }
+        public string BookTitle { get; set; }
+        public DateTime DueDate { get; set; }
+    }
+}
+
+<style>
+    body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: linear-gradient(to bottom, #1e1e1e, #2a2a2a);
+        color: #e0e0e0;
+    }
+
+    .header {
+        text-align: center;
+        padding: 2rem 1rem;
+        background: #343a40;
+        color: white;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        margin-bottom: 2rem;
+    }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin: 0;
+            font-weight: bold;
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            margin-top: 0.5rem;
+            font-weight: 300;
+            opacity: 0.9;
+        }
+
+    .card {
+        background: #f5f5dc;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        margin-bottom: 20px;
+        color: #000000;
+    }
+
+        .card h2 {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: #000000;
+        }
+
+    form {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    input {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        background-color: #ffffff;
+        color: #000000;
+    }
+
+        input:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 6px rgba(52, 152, 219, 0.6);
+        }
+
+    .btn {
+        padding: 10px 15px;
+        font-size: 1rem;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: transform 0.2s ease, background-color 0.3s ease;
+    }
+
+    .btn-primary {
+        background-color: #007bff;
+        color: white;
+    }
+
+        .btn-primary:hover {
+            background-color: #0056b3;
+        }
+
+    ul {
+        list-style: none;
+        padding: 0;
+    }
+
+    li {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        margin-bottom: 10px;
+        background-color: #ffffff;
+        color: #000000;
+    }
+</style>

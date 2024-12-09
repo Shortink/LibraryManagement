@@ -1,0 +1,222 @@
+﻿@page "/Setting"
+
+<div class="container">
+    <div class="header">
+        <h1>⚙️ Settings</h1>
+        <p>Configure library details, manage accounts, and customize borrowing rules.</p>
+    </div>
+
+    <!-- Library Details Section -->
+    <div class="card">
+        <h2>Library Details</h2>
+        <form>
+            <label for="library-name">Library Name</label>
+            <input id="library-name" type="text" @bind="LibraryName" placeholder="Enter library name" />
+
+            <label for="library-address">Library Address</label>
+            <textarea id="library-address" @bind="LibraryAddress" placeholder="Enter library address"></textarea>
+
+            <button type="button" class="btn btn-primary" @onclick="UpdateLibraryDetails">Update Details</button>
+        </form>
+    </div>
+
+    <!-- Account Management Section -->
+    <div class="card">
+        <h2>Account Management</h2>
+        <form>
+            <label for="admin-name">Admin Name</label>
+            <input id="admin-name" type="text" @bind="NewAdminName" placeholder="Enter admin name" />
+            <button type="button" class="btn btn-primary" @onclick="AddAdmin">Add Admin</button>
+        </form>
+
+        <h3>Current Admins</h3>
+        <ul>
+            @foreach (var admin in Admins)
+            {
+                <li>
+                    @admin
+                    <button type="button" class="btn btn-danger" @onclick="() => RemoveAdmin(admin)">Remove</button>
+                </li>
+            }
+        </ul>
+    </div>
+
+    <!-- Borrowing Rules Section -->
+    <div class="card">
+        <h2>Borrowing Rules</h2>
+        <div class="rule">
+            <label for="max-books">Max Books Per Member: @MaxBooksPerMember</label>
+            <input id="max-books" type="range" min="1" max="10" @bind="MaxBooksPerMember" />
+        </div>
+        <div class="rule">
+            <label for="fine-per-day">Fine Per Day: $@FinePerDay</label>
+            <input id="fine-per-day" type="range" min="0" max="10" step="0.5" @bind="FinePerDay" />
+        </div>
+        <button type="button" class="btn btn-primary" @onclick="UpdateBorrowingRules">Save Rules</button>
+    </div>
+</div>
+
+@code {
+    private string LibraryName { get; set; } = "My Library";
+    private string LibraryAddress { get; set; } = "123 Library Street, Booktown";
+    private List<string> Admins { get; set; } = new List<string> { "Admin1", "Admin2" };
+    private string NewAdminName { get; set; } = string.Empty;
+    private int MaxBooksPerMember { get; set; } = 5;
+    private double FinePerDay { get; set; } = 1.0;
+
+    private void UpdateLibraryDetails()
+    {
+        Console.WriteLine($"Library Name: {LibraryName}, Address: {LibraryAddress}");
+    }
+
+    private void AddAdmin()
+    {
+        if (!string.IsNullOrWhiteSpace(NewAdminName))
+        {
+            Admins.Add(NewAdminName);
+            NewAdminName = string.Empty;
+        }
+    }
+
+    private void RemoveAdmin(string admin)
+    {
+        Admins.Remove(admin);
+    }
+
+    private void UpdateBorrowingRules()
+    {
+        Console.WriteLine($"Max Books: {MaxBooksPerMember}, Fine Per Day: {FinePerDay}");
+    }
+}
+
+<style>
+
+    body {
+        background: linear-gradient(to bottom, #1e1e1e, #2a2a2a);
+        color: #e0e0e0;
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+    }
+
+    .container {
+        margin: 20px auto;
+        max-width: 800px;
+        padding: 20px;
+    }
+
+    .header {
+        text-align: center;
+        padding: 2rem 1rem;
+        background: #343a40;
+        color: white;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        margin-bottom: 2rem;
+    }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin: 0;
+            font-weight: bold;
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            margin-top: 0.5rem;
+            font-weight: 300;
+            opacity: 0.9;
+        }
+
+
+    .card {
+        background: #f5f5dc;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        margin-bottom: 20px;
+        color: #000000;
+    }
+
+        .card h2 {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: #000000;
+        }
+
+
+    label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+        color: #000000;
+    }
+
+    input, textarea {
+        width: 100%;
+        padding: 10px;
+        margin-bottom: 15px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        background-color: #ffffff;
+        color: #000000;
+    }
+
+        input[type="range"] {
+            width: 100%;
+        }
+
+    textarea {
+        resize: vertical;
+    }
+
+
+    .btn {
+        padding: 10px 15px;
+        font-size: 1rem;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: transform 0.2s ease, background-color 0.3s ease;
+    }
+
+    .btn-primary {
+        background-color: #007bff;
+        color: white;
+    }
+
+        .btn-primary:hover {
+            background-color: #0056b3;
+        }
+
+    .btn-danger {
+        background-color: #e63946;
+        color: white;
+    }
+
+        .btn-danger:hover {
+            background-color: #d62828;
+        }
+
+
+    .rule {
+        margin-bottom: 15px;
+    }
+
+    ul {
+        list-style: none;
+        padding: 0;
+    }
+
+    li {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        margin-bottom: 10px;
+        background-color: #ffffff;
+        color: #000000;
+    }
+</style>

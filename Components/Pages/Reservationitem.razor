@@ -1,0 +1,277 @@
+﻿@page "/Reservation"
+
+<div class="container">
+    <div class="header">
+        <h1>📅 Reservations</h1>
+        <p>Manage book reservations and library members efficiently.</p>
+    </div>
+
+    <!-- Add Member Section -->
+    <div class="card card-cream">
+        <h2>Add a Member</h2>
+        <form>
+            <input type="text" placeholder="Enter Member Name" @bind="NewMemberName" />
+            <button type="button" class="btn btn-primary" @onclick="AddMember">Add Member</button>
+        </form>
+    </div>
+
+    <!-- Add Book Section -->
+    <div class="card card-cream">
+        <h2>Add a Book</h2>
+        <form>
+            <div class="form-group">
+                <input type="text" placeholder="Enter Book Title" @bind="NewBookTitle" />
+            </div>
+            <div class="form-group">
+                <input type="text" placeholder="Enter Author Name" @bind="NewBookAuthor" />
+            </div>
+            <div class="form-group">
+                <input type="text" placeholder="Enter ISBN" @bind="NewBookISBN" />
+            </div>
+            <button type="button" class="btn btn-primary" @onclick="AddBook">Add Book</button>
+        </form>
+    </div>
+
+    <!-- Reservation Form Section -->
+    <div class="card card-cream">
+        <h2>Reserve a Book</h2>
+        <form>
+            <select @bind="SelectedMemberId">
+                <option value="">-- Select Member --</option>
+                @foreach (var member in Members)
+                {
+                    <option value="@member.Id">@member.Name</option>
+                }
+            </select>
+
+            <select @bind="SelectedBookId">
+                <option value="">-- Select Book --</option>
+                @foreach (var book in Books)
+                {
+                    <option value="@book.Id">@book.Title</option>
+                }
+            </select>
+
+            <input type="date" @bind="ReservationDate" />
+
+            <button type="button" class="btn btn-primary" @onclick="ReserveBook">Reserve Book</button>
+        </form>
+    </div>
+
+    <!-- Reservations List Section -->
+    <div class="card card-cream">
+        <h2>Current Reservations</h2>
+        <ul>
+            @if (Reservations.Any())
+            {
+                @foreach (var reservation in Reservations)
+                {
+                    <li>
+                        <span>@reservation.MemberName reserved "<strong>@reservation.BookTitle</strong>" (Date: @reservation.ReservationDate.ToShortDateString())</span>
+                        <button type="button" class="btn btn-danger" @onclick="() => CancelReservation(reservation.Id)">Cancel</button>
+                    </li>
+                }
+            }
+            else
+            {
+                <li>No reservations found.</li>
+            }
+        </ul>
+    </div>
+</div>
+
+@code {
+    private List<Member> Members { get; set; } = new();
+    private List<Book> Books { get; set; } = new();
+    private List<Reservation> Reservations { get; set; } = new();
+
+    private string NewMemberName { get; set; } = string.Empty;
+    private string NewBookTitle { get; set; } = string.Empty;
+    private string NewBookAuthor { get; set; } = string.Empty;
+    private string NewBookISBN { get; set; } = string.Empty;
+    private string SelectedMemberId { get; set; } = string.Empty;
+    private string SelectedBookId { get; set; } = string.Empty;
+    private DateTime ReservationDate { get; set; } = DateTime.Now;
+
+    private void AddMember()
+    {
+        if (!string.IsNullOrWhiteSpace(NewMemberName))
+        {
+            Members.Add(new Member { Id = Guid.NewGuid().ToString(), Name = NewMemberName.Trim() });
+            NewMemberName = string.Empty;
+        }
+    }
+
+    private void AddBook()
+    {
+        if (!string.IsNullOrWhiteSpace(NewBookTitle) && !string.IsNullOrWhiteSpace(NewBookAuthor) && !string.IsNullOrWhiteSpace(NewBookISBN))
+        {
+            Books.Add(new Book { Id = Guid.NewGuid().ToString(), Title = NewBookTitle.Trim(), Author = NewBookAuthor.Trim(), ISBN = NewBookISBN.Trim() });
+            NewBookTitle = string.Empty;
+            NewBookAuthor = string.Empty;
+            NewBookISBN = string.Empty;
+        }
+    }
+
+    private void ReserveBook()
+    {
+        if (!string.IsNullOrWhiteSpace(SelectedMemberId) && !string.IsNullOrWhiteSpace(SelectedBookId))
+        {
+            var member = Members.FirstOrDefault(m => m.Id == SelectedMemberId);
+            var book = Books.FirstOrDefault(b => b.Id == SelectedBookId);
+            if (member != null && book != null)
+            {
+                Reservations.Add(new Reservation
+                    {
+                        Id = Guid.NewGuid().ToString(),
+                        MemberName = member.Name,
+                        BookTitle = book.Title,
+                        ReservationDate = ReservationDate
+                    });
+            }
+        }
+    }
+
+    private void CancelReservation(string reservationId)
+    {
+        var reservation = Reservations.FirstOrDefault(r => r.Id == reservationId);
+        if (reservation != null)
+        {
+            Reservations.Remove(reservation);
+        }
+    }
+
+    private class Member
+    {
+        public string Id { get; set; }
+        public string Name { get; set; }
+    }
+
+    private class Book
+    {
+        public string Id { get; set; }
+        public string Title { get; set; }
+        public string Author { get; set; }
+        public string ISBN { get; set; }
+    }
+
+    private class Reservation
+    {
+        public string Id { get; set; }
+        public string MemberName { get; set; }
+        public string BookTitle { get; set; }
+        public DateTime ReservationDate { get; set; }
+    }
+}
+
+<style>
+    body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: linear-gradient(to bottom, #1e1e1e, #2a2a2a);
+        color: #e0e0e0;
+    }
+
+    .header {
+        text-align: center;
+        padding: 2rem 1rem;
+        background: #343a40;
+        color: white;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        margin-bottom: 2rem;
+    }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin: 0;
+            font-weight: bold;
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            margin-top: 0.5rem;
+            font-weight: 300;
+            opacity: 0.9;
+        }
+
+    .card {
+        background: #f5f5dc;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        margin-bottom: 20px;
+        color: #000000;
+    }
+
+        .card h2 {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: #000000;
+        }
+
+    form {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    input, select {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        background-color: #ffffff;
+        color: #000000;
+    }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 6px rgba(52, 152, 219, 0.6);
+        }
+
+    .btn {
+        padding: 10px 15px;
+        font-size: 1rem;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: transform 0.2s ease, background-color 0.3s ease;
+    }
+
+    .btn-primary {
+        background-color: #007bff;
+        color: white;
+    }
+
+        .btn-primary:hover {
+            background-color: #0056b3;
+        }
+
+    .btn-danger {
+        background-color: #e63946;
+        color: white;
+    }
+
+        .btn-danger:hover {
+            background-color: #d62828;
+        }
+
+    ul {
+        list-style: none;
+        padding: 0;
+    }
+
+    li {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        margin-bottom: 10px;
+        background-color: #ffffff;
+        color: #000000;
+    }
+</style>
