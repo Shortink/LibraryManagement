@@ -1,4 +1,5 @@
 ﻿@page "/Borrow/Return"
+@using LibraryManagement.Data
 
 <div class="container">
     <div class="header">
@@ -11,25 +12,9 @@
         <div class="card card-cream">
             <h2>Add a Member</h2>
             <form>
-                <input type="text" placeholder="Enter Member Name" @bind="NewMemberName" />
+                <input type="text" placeholder="First Name" @bind="firstName" />
+                <input type="text" placeholder="Last Name" @bind="lastName" />
                 <button type="button" class="btn btn-primary" @onclick="AddMember">Add Member</button>
-            </form>
-        </div>
-
-        <!-- Add Book Section -->
-        <div class="card card-cream">
-            <h2>Add a Book</h2>
-            <form>
-                <div class="form-group">
-                    <input type="text" placeholder="Enter Book Title" @bind="NewBookTitle" />
-                </div>
-                <div class="form-group">
-                    <input type="text" placeholder="Enter Author Name" @bind="NewBookAuthor" />
-                </div>
-                <div class="form-group">
-                    <input type="text" placeholder="Enter ISBN" @bind="NewBookISBN" />
-                </div>
-                <button type="button" class="btn btn-primary" @onclick="AddBook">Add Book</button>
             </form>
         </div>
 
@@ -37,18 +22,18 @@
         <div class="card card-cream">
             <h2>Borrow a Book</h2>
             <form>
-                <select @bind="SelectedMemberId">
-                    <option value="">-- Select Member --</option>
-                    @foreach (var member in Members)
+                <select @bind="selectedMemberId">
+                    <option value="">-- Select Member -- </option>
+                    @foreach (Member member in members)
                     {
-                        <option value="@member.Id">@member.Name</option>
+                        <option value="@member.MemberID">@member.FirstName @member.LastName</option>
                     }
                 </select>
-                <select @bind="SelectedBookId">
+                <select @bind="selectedBookId">
                     <option value="">-- Select Book --</option>
-                    @foreach (var book in Books)
+                    @foreach (var book in books)
                     {
-                        <option value="@book.Id">@book.Title</option>
+                        <option value="@book.BookId">@book.Title</option>
                     }
                 </select>
                 <input type="date" @bind="BorrowDate" />
@@ -61,16 +46,16 @@
         <div class="card card-cream">
             <h2>Return a Book</h2>
             <form>
-                <input type="text" placeholder="Search by Member or Book Name" @bind="SearchQuery" />
+                <input type="text" placeholder="Search by Member or Book Name" @bind="searchQuery" />
                 <button type="button" class="btn btn-primary" @onclick="SearchBorrowedBooks">Search</button>
 
                 <ul>
-                    @if (BorrowedBooks.Any())
+                    @if (borrowedBooks.Any())
                     {
-                        @foreach (var borrowed in BorrowedBooks)
+                        @foreach (var borrowed in borrowedBooks)
                         {
                             <li>
-                                <span>@borrowed.MemberName borrowed "<strong>@borrowed.BookTitle</strong>" (Due: @borrowed.DueDate.ToShortDateString())</span>
+                                <span>@borrowed.MemberName borrowed "<strong>@borrowed.MemberName</strong>" (Due: @borrowed.DueDate.ToShortDateString())</span>
                                 <button type="button" class="btn btn-danger" @onclick="() => ReturnBook(borrowed.Id)">Return</button>
                             </li>
                         }
@@ -86,99 +71,53 @@
 </div>
 
 @code {
+    static DbManager db = new DbManager();
+    List<Member> members = db.GetMembers();
+    List<Book> books = db.GetBooks();
+    List<BorrowedBook> borrowedBooks = db.GetBorrowedBooks();
 
-    //todo move to seperate class
-    private List<Member> Members { get; set; } = new();
-    private List<Book> Books { get; set; } = new();
-    private List<BorrowedBook> BorrowedBooks { get; set; } = new();
+    string firstName = string.Empty;
+    string lastName  = string.Empty;
+    string searchQuery = string.Empty;
+    int selectedMemberId;
+    int selectedBookId;
 
-    private string NewMemberName { get; set; } = string.Empty;
-    private string NewBookTitle { get; set; } = string.Empty;
-    private string NewBookAuthor { get; set; } = string.Empty;
-    private string NewBookISBN { get; set; } = string.Empty;
-    private string SelectedMemberId { get; set; } = string.Empty;
-    private string SelectedBookId { get; set; } = string.Empty;
-    private string SearchQuery { get; set; } = string.Empty;
-
-    private DateTime BorrowDate { get; set; } = DateTime.Now;
-    private DateTime DueDate { get; set; } = DateTime.Now.AddDays(14);
+    DateTime BorrowDate = DateTime.Now;
+    DateTime DueDate  = DateTime.Now.AddDays(14);
 
     private void AddMember()
     {
-        if (!string.IsNullOrWhiteSpace(NewMemberName))
+        if (!string.IsNullOrWhiteSpace(firstName) && !string.IsNullOrWhiteSpace(lastName))
         {
-            Members.Add(new Member { Id = Guid.NewGuid().ToString(), Name = NewMemberName.Trim() });
-            NewMemberName = string.Empty;
-        }
-    }
-
-    private void AddBook()
-    {
-        if (!string.IsNullOrWhiteSpace(NewBookTitle) && !string.IsNullOrWhiteSpace(NewBookAuthor) && !string.IsNullOrWhiteSpace(NewBookISBN))
-        {
-            Books.Add(new Book { Id = Guid.NewGuid().ToString(), Title = NewBookTitle.Trim(), Author = NewBookAuthor.Trim(), ISBN = NewBookISBN.Trim() });
-            NewBookTitle = string.Empty;
-            NewBookAuthor = string.Empty;
-            NewBookISBN = string.Empty;
+            Member newMember = new Member(firstName, lastName);
+            members.Add(newMember);
+            db.AddNewMember(newMember);
+            firstName = string.Empty;
+            lastName = string.Empty;
         }
     }
 
     private void BorrowBook()
     {
-        if (!string.IsNullOrWhiteSpace(SelectedMemberId) && !string.IsNullOrWhiteSpace(SelectedBookId))
+        var member = members.FirstOrDefault(m => m.MemberID == selectedMemberId);
+        var book = books.FirstOrDefault(b => b.BookId == selectedBookId);
+
+        if (member != null && book != null)
         {
-            var member = Members.FirstOrDefault(m => m.Id == SelectedMemberId);
-            var book = Books.FirstOrDefault(b => b.Id == SelectedBookId);
-            if (member != null && book != null)
-            {
-                BorrowedBooks.Add(new BorrowedBook
-                    {
-                        Id = Guid.NewGuid().ToString(),
-                        MemberName = member.Name,
-                        BookTitle = book.Title,
-                        DueDate = DueDate
-                    });
-            }
+            BorrowedBook borrowedBook = new BorrowedBook(selectedBookId, selectedMemberId, BorrowDate, DueDate);
+            borrowedBooks.Add(borrowedBook);
+            db.BorrowBook(borrowedBook);
         }
     }
 
     private void SearchBorrowedBooks()
     {
-        BorrowedBooks = BorrowedBooks
-            .Where(b => b.MemberName.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase) ||
-                        b.BookTitle.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase))
-            .ToList();
+        throw new NotImplementedException();
     }
 
-    private void ReturnBook(string borrowedBookId)
+    private void ReturnBook(int borrowedBookId)
     {
-        var borrowedBook = BorrowedBooks.FirstOrDefault(b => b.Id == borrowedBookId);
-        if (borrowedBook != null)
-        {
-            BorrowedBooks.Remove(borrowedBook);
-        }
-    }
-
-    private class Member
-    {
-        public string Id { get; set; }
-        public string Name { get; set; }
-    }
-
-    private class Book
-    {
-        public string Id { get; set; }
-        public string Title { get; set; }
-        public string Author { get; set; }
-        public string ISBN { get; set; }
-    }
-
-    private class BorrowedBook
-    {
-        public string Id { get; set; }
-        public string MemberName { get; set; }
-        public string BookTitle { get; set; }
-        public DateTime DueDate { get; set; }
+        throw new NotImplementedException();
     }
 }
 

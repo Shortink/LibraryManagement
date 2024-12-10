@@ -11,33 +11,43 @@
     </div>
 </div>
 
-<h2>Book List</h2>
-<table class="table table-bordered">
-    <thead>
-        <tr>
-            <th>ISBN</th>
-            <th>Title</th>
-            <th>Author</th>
-            <th>Genre</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var book in books)
-        {
-            <tr>
-                <td>@book.Isbn</td>
-                <td>@book.Title</td>
-                <td>@book.AuthorName</td>
-                <td>@book.Genre</td>
-            </tr>
-        }
-    </tbody>
-</table>
-
-
-
 
 @code {
-    static DbManager db = new DbManager();
-    List<Book> books = db.GetBooks();
+    private async Task UploadPicture(ChangeEventArgs e)
+    {
+        var files = e.Value as IReadOnlyList<IBrowserFile>;
+        if (files != null && files.Count > 0)
+        {
+            var file = files[0];
+            Console.WriteLine($"File uploaded: {file.Name}");
+
+        }
+    }
 }
+
+<style>
+    .home-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+    }
+
+    .content {
+        background: rgba(0, 0, 0, 0.6);
+        padding: 30px;
+        border-radius: 15px;
+    }
+
+    .title {
+        font-size: 3rem;
+        font-weight: bold;
+        margin-bottom: 20px;
+    }
+
+    .description {
+        font-size: 1.2rem;
+        margin-bottom: 30px;
+    }
+</style>
+
