@@ -46,7 +46,7 @@ namespace LibraryManagement.Data
             using SqlDataReader reader = command.ExecuteReader();
             while (reader.Read())
             {
-                borrowedBooks.Add(new BorrowedBook(reader.GetInt32(0),reader.GetInt32(1), reader.GetString(2), reader.GetDateTime(3), reader.GetDateTime(4)));
+                borrowedBooks.Add(new BorrowedBook(reader.GetInt32(0),reader.GetInt32(1), reader.GetInt32(2), reader.GetString(3), reader.GetDateTime(4), reader.GetDateTime(4)));
             }
         }
 
