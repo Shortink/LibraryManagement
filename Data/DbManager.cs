@@ -5,13 +5,16 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading.Tasks;
+using System.Transactions;
 
 namespace LibraryManagement.Data
 {
     public class DbManager
     {
+        string connectionString = @"Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=Library;Integrated Security=True";
         static List<Book> books = new();
         static List<Member> members = new();
         static List<BorrowedBook> borrowedBooks = new();
@@ -25,7 +28,6 @@ namespace LibraryManagement.Data
         public void LoadBorrowedBook()
         {
             borrowedBooks.Clear();
-            string connectionString = @"Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=Library;Integrated Security=True";
             SqlConnection connection = new SqlConnection(connectionString);
             string query = @"
             SELECT 
@@ -33,12 +35,17 @@ namespace LibraryManagement.Data
                 c.BookId,
                 c.PatreonId,
                 CONCAT(p.FirstName, ' ', p.LastName) AS PatreonName,
+                b.Title,
                 c.CheckoutDate,
                 c.DueDate
             FROM 
                 lms_checkout c
             JOIN 
-                lms_patreon p ON c.PatreonId = p.PatreonId;";
+                lms_patreon p ON c.PatreonId = p.PatreonId
+            JOIN 
+                lms_book b ON c.BookId = b.BookId
+            WHERE
+                c.ReturnDate IS NULL;";
 
             connection.Open();
             SqlCommand command = new SqlCommand(query, connection);
@@ -46,13 +53,12 @@ namespace LibraryManagement.Data
             using SqlDataReader reader = command.ExecuteReader();
             while (reader.Read())
             {
-                borrowedBooks.Add(new BorrowedBook(reader.GetInt32(0),reader.GetInt32(1), reader.GetInt32(2), reader.GetString(3), reader.GetDateTime(4), reader.GetDateTime(4)));
+                borrowedBooks.Add(new BorrowedBook(reader.GetInt32(0),reader.GetInt32(1), reader.GetInt32(2), reader.GetString(3), reader.GetString(4), reader.GetDateTime(5), reader.GetDateTime(6)));
             }
         }
 
         public async void BorrowBook(BorrowedBook book)
         {
-            string connectionString = @"Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=Library;Integrated Security=True";
             SqlConnection connection = new SqlConnection(connectionString);
             connection.Open();
             string borrowBookQuery = @"INSERT INTO lms_checkout (BookId, PatreonId, CheckoutDate, DueDate) VALUES (@BookId, @PatreonId, @CheckoutDate, @DueDate);";
@@ -64,11 +70,57 @@ namespace LibraryManagement.Data
             command.ExecuteNonQuery();
             await Application.Current.MainPage.DisplayAlert("Success", "Book borrowed successfully", "OK");
         }
+
+        public async void ReturnBook(BorrowedBook book)
+        {
+
+            using (SqlConnection connection = new SqlConnection(connectionString))
+            {
+                connection.Open();
+                using (SqlTransaction transaction = connection.BeginTransaction())
+                {
+                    try
+                    {
+                        string returnBookQuery = @"
+                            UPDATE lms_checkout
+                            SET ReturnDate = GETDATE()
+                            WHERE BookId = @BookId
+                            AND PatreonId = @PatreonId
+                            AND ReturnDate IS NULL;";
+
+                        using (SqlCommand command = new SqlCommand(returnBookQuery, connection, transaction))
+                        {
+                            command.Parameters.AddWithValue("@BookId", book.BookId);
+                            command.Parameters.AddWithValue("@PatreonId", book.MemberId);
+
+                            int rowsAffected = command.ExecuteNonQuery();
+                            if (rowsAffected == 0)
+                            {
+                                // No rows were updated, meaning the book was not checked out or already returned
+                                transaction.Rollback();
+                                //return false;
+                            }
+                        }
+                        transaction.Commit();
+                    }
+                    catch (Exception ex)
+                    {
+                        if (transaction.Connection != null)
+                        {
+                            transaction.Rollback();
+                        }
+                        await Application.Current.MainPage.DisplayAlert("Error", ex.Message, "OK");
+                        //return false;
+                    }
+                }
+
+
+            }
+        }
         
         public void LoadMembers()
         {
             members.Clear();
-            string connectionString = @"Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=Library;Integrated Security=True";
             SqlConnection connection = new SqlConnection(connectionString);
             string query = @"SELECT * FROM lms_patreon;";
             connection.Open();
@@ -83,7 +135,6 @@ namespace LibraryManagement.Data
 
         public async void AddNewMember(Member member)
         {
-            string connectionString = @"Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=Library;Integrated Security=True";
             SqlConnection connection = new SqlConnection(connectionString);
             connection.Open();
 
@@ -97,7 +148,6 @@ namespace LibraryManagement.Data
         public void LoadBooks()
         {
             books.Clear();
-            string connectionString = @"Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=Library;Integrated Security=True";
             SqlConnection connection = new SqlConnection(connectionString);
             string query = @"
             SELECT 
@@ -130,7 +180,6 @@ namespace LibraryManagement.Data
         {
             string firstName = book.AuthorName.Split(' ')[0];
             string lastName = book.AuthorName.Split(' ')[1];
-            string connectionString = @"Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=Library;Integrated Security=True";
             SqlConnection connection = new SqlConnection(connectionString);
             connection.Open();
 

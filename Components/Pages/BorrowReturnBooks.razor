@@ -55,7 +55,7 @@
                         @foreach (var borrowed in borrowedBooks)
                         {
                             <li>
-                                <span>@borrowed.MemberName borrowed "<strong>@borrowed.MemberName</strong>" (Due: @borrowed.DueDate.ToShortDateString())</span>
+                                <span>@borrowed.MemberName borrowed "<strong>@borrowed.BookName</strong>" (Due: @borrowed.DueDate.ToShortDateString())</span>
                                 <button type="button" class="btn btn-danger" @onclick="() => ReturnBook(borrowed.Id)">Return</button>
                             </li>
                         }
@@ -107,6 +107,7 @@
             BorrowedBook borrowedBook = new BorrowedBook(selectedBookId, selectedMemberId, BorrowDate, DueDate);
             borrowedBooks.Add(borrowedBook);
             db.BorrowBook(borrowedBook);
+            borrowedBooks = db.GetBorrowedBooks();
         }
     }
 
@@ -117,7 +118,13 @@
 
     private void ReturnBook(int borrowedBookId)
     {
-        throw new NotImplementedException();
+        // throw new NotImplementedException();
+        var borrowedBook = borrowedBooks.FirstOrDefault(b => b.Id == borrowedBookId);
+        if (borrowedBook != null)
+        {
+            db.ReturnBook(borrowedBook);
+            borrowedBooks.Remove(borrowedBook);
+        }
     }
 }
 
