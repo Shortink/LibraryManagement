@@ -18,6 +18,7 @@ namespace LibraryManagement.Data
         static List<Book> books = new();
         static List<Member> members = new();
         static List<BorrowedBook> borrowedBooks = new();
+        static List<BorrowedBook> borrowedBooksRecord = new();
         static List<Reservation> reservedBooks = new();
         List<string> categories = new List<string> { "Fiction", "Non-Fiction", "Science Fiction", "Mystery", "Romance", "Thriller", "Horror", "Biography", "Fantasy", "Self-Help" };
         public DbManager() 
@@ -26,6 +27,7 @@ namespace LibraryManagement.Data
             LoadMembers();
             LoadBorrowedBook();
             LoadReservedBook();
+
         }
 
         public void LoadCategories()
@@ -73,7 +75,7 @@ namespace LibraryManagement.Data
             }
         }
 
-        public void LoadBorrowedBook()
+        public void LoadBorrowedBooksRecord()
         {
             borrowedBooks.Clear();
             SqlConnection connection = new SqlConnection(connectionString);
@@ -101,7 +103,39 @@ namespace LibraryManagement.Data
             using SqlDataReader reader = command.ExecuteReader();
             while (reader.Read())
             {
-                borrowedBooks.Add(new BorrowedBook(reader.GetInt32(0),reader.GetInt32(1), reader.GetInt32(2), reader.GetString(3), reader.GetString(4), reader.GetDateTime(5), reader.GetDateTime(6)));
+                borrowedBooksRecord.Add(new BorrowedBook(reader.GetInt32(0),reader.GetInt32(1), reader.GetInt32(2), reader.GetString(3), reader.GetString(4), reader.GetDateTime(5), reader.GetDateTime(6)));
+            }
+        }
+
+        public void LoadBorrowedBook()
+        {
+            borrowedBooks.Clear();
+            SqlConnection connection = new SqlConnection(connectionString);
+            string query = @"
+            SELECT 
+                c.CheckoutId,
+                c.BookId,
+                c.PatreonId,
+                CONCAT(p.FirstName, ' ', p.LastName) AS PatreonName,
+                b.Title,
+                c.CheckoutDate,
+                c.DueDate
+            FROM 
+                lms_checkout c
+            JOIN 
+                lms_patreon p ON c.PatreonId = p.PatreonId
+            JOIN 
+                lms_book b ON c.BookId = b.BookId
+            WHERE
+                c.ReturnDate IS NULL;";
+
+            connection.Open();
+            SqlCommand command = new SqlCommand(query, connection);
+
+            using SqlDataReader reader = command.ExecuteReader();
+            while (reader.Read())
+            {
+                borrowedBooks.Add(new BorrowedBook(reader.GetInt32(0), reader.GetInt32(1), reader.GetInt32(2), reader.GetString(3), reader.GetString(4), reader.GetDateTime(5), reader.GetDateTime(6)));
             }
         }
 
@@ -140,7 +174,8 @@ namespace LibraryManagement.Data
 
         public async void RemoveBook(Book book)
         {
-            var borrowedBook = borrowedBooks.Find(b => b.BookId == book.BookId);
+            LoadBorrowedBooksRecord();
+            var borrowedBook = borrowedBooksRecord.Find(b => b.BookId == book.BookId);
             var reservedBook = reservedBooks.Find(b => b.BookID == book.BookId);
             if (borrowedBook != null)
             {

@@ -23,7 +23,7 @@
             <h2>Borrow a Book</h2>
             <form>
                 <select @bind="selectedMemberId">
-                    <option value="">-- Select Member -- </option>
+                    <option value="" selected >-- Select Member -- </option>
                     @foreach (Member member in members)
                     {
                         <option value="@member.MemberID">@member.FirstName @member.LastName</option>
@@ -67,6 +67,7 @@
                 </ul>
             </form>
         </div>
+
     </div>
 </div>
 
@@ -90,8 +91,9 @@
         if (!string.IsNullOrWhiteSpace(firstName) && !string.IsNullOrWhiteSpace(lastName))
         {
             Member newMember = new Member(firstName, lastName);
-            members.Add(newMember);
+            // members.Add(newMember);
             db.AddNewMember(newMember);
+            members = db.GetMembers();
             firstName = string.Empty;
             lastName = string.Empty;
         }
@@ -99,32 +101,31 @@
 
     private void BorrowBook()
     {
-        var member = members.FirstOrDefault(m => m.MemberID == selectedMemberId);
-        var book = books.FirstOrDefault(b => b.BookId == selectedBookId);
+        Member member = members.FirstOrDefault(m => m.MemberID == selectedMemberId);
+        Book book = books.FirstOrDefault(b => b.BookId == selectedBookId);
 
         if (member != null && book != null)
         {
             BorrowedBook borrowedBook = new BorrowedBook(selectedBookId, selectedMemberId, BorrowDate, DueDate);
-            borrowedBooks.Add(borrowedBook);
             db.BorrowBook(borrowedBook);
+            borrowedBooks = db.GetBorrowedBooks();
+        }
+    }
+
+    private void ReturnBook(int borrowedBookId)
+    {
+        BorrowedBook borrowedBook = borrowedBooks.FirstOrDefault(b => b.Id == borrowedBookId);
+        if (borrowedBook != null)
+        {
+            db.ReturnBook(borrowedBook);
             borrowedBooks = db.GetBorrowedBooks();
         }
     }
 
     private void SearchBorrowedBooks()
     {
-        throw new NotImplementedException();
-    }
-
-    private void ReturnBook(int borrowedBookId)
-    {
         // throw new NotImplementedException();
-        var borrowedBook = borrowedBooks.FirstOrDefault(b => b.Id == borrowedBookId);
-        if (borrowedBook != null)
-        {
-            db.ReturnBook(borrowedBook);
-            borrowedBooks.Remove(borrowedBook);
-        }
+        borrowedBooks = borrowedBooks.Where(b => b.MemberName.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) || b.BookName.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)).ToList();
     }
 }
 
@@ -229,4 +230,19 @@
         background-color: #ffffff;
         color: #000000;
     }
+
+    input, select {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        background-color: #ffffff;
+        color: #000000;
+    }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 6px rgba(52, 152, 219, 0.6);
+        }
 </style>
