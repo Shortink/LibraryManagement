@@ -73,50 +73,21 @@ namespace LibraryManagement.Data
 
         public async void ReturnBook(BorrowedBook book)
         {
-
-            using (SqlConnection connection = new SqlConnection(connectionString))
-            {
-                connection.Open();
-                using (SqlTransaction transaction = connection.BeginTransaction())
-                {
-                    try
-                    {
-                        string returnBookQuery = @"
-                            UPDATE lms_checkout
-                            SET ReturnDate = GETDATE()
-                            WHERE BookId = @BookId
-                            AND PatreonId = @PatreonId
-                            AND ReturnDate IS NULL;";
-
-                        using (SqlCommand command = new SqlCommand(returnBookQuery, connection, transaction))
-                        {
-                            command.Parameters.AddWithValue("@BookId", book.BookId);
-                            command.Parameters.AddWithValue("@PatreonId", book.MemberId);
-
-                            int rowsAffected = command.ExecuteNonQuery();
-                            if (rowsAffected == 0)
-                            {
-                                // No rows were updated, meaning the book was not checked out or already returned
-                                transaction.Rollback();
-                                //return false;
-                            }
-                        }
-                        transaction.Commit();
-                    }
-                    catch (Exception ex)
-                    {
-                        if (transaction.Connection != null)
-                        {
-                            transaction.Rollback();
-                        }
-                        await Application.Current.MainPage.DisplayAlert("Error", ex.Message, "OK");
-                        //return false;
-                    }
-                }
-
-
-            }
+            SqlConnection connection = new SqlConnection(connectionString);
+            connection.Open();
+            string returnBookQuery = @"
+                UPDATE lms_checkout
+                SET ReturnDate = GETDATE()
+                WHERE BookId = @BookId
+                AND PatreonId = @PatreonId
+                AND ReturnDate IS NULL;";
+            SqlCommand command = new SqlCommand(returnBookQuery, connection);
+            command.Parameters.AddWithValue("@BookId", book.BookId);
+            command.Parameters.AddWithValue("@PatreonId", book.MemberId);
+            command.ExecuteNonQuery();
+            await Application.Current.MainPage.DisplayAlert("Success", "Book returned successfully", "OK");
         }
+
         
         public void LoadMembers()
         {
