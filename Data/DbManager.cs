@@ -18,11 +18,59 @@ namespace LibraryManagement.Data
         static List<Book> books = new();
         static List<Member> members = new();
         static List<BorrowedBook> borrowedBooks = new();
+        static List<Reservation> reservedBooks = new();
+        List<string> categories = new List<string> { "Fiction", "Non-Fiction", "Science Fiction", "Mystery", "Romance", "Thriller", "Horror", "Biography", "Fantasy", "Self-Help" };
         public DbManager() 
         {
             LoadBooks();
             LoadMembers();
             LoadBorrowedBook();
+            LoadReservedBook();
+        }
+
+        public void LoadCategories()
+        {
+            categories.Clear();
+            SqlConnection connection = new SqlConnection(connectionString);
+            string query = @"SELECT * FROM lms_category;";
+            connection.Open();
+            SqlCommand command = new SqlCommand(query, connection);
+
+            using SqlDataReader reader = command.ExecuteReader();
+            while (reader.Read())
+            {
+                string data = $"{reader.GetInt32(0)}:{reader.GetString(1)}";
+                categories.Add(data);
+            }
+        }
+
+        public void LoadReservedBook()
+        {
+            reservedBooks.Clear();
+            SqlConnection connection = new SqlConnection(connectionString);
+            string query = @"
+            SELECT 
+                r.HoldId,
+                r.BookId,
+                r.PatreonId,
+                CONCAT(p.FirstName, ' ', p.LastName) AS PatreonName,
+                b.Title,
+                r.ReservationDate
+            FROM
+                lms_reservation r
+            JOIN
+                lms_patreon p ON r.PatreonId = p.PatreonId
+            JOIN
+                lms_book b ON r.BookId = b.BookId
+;";
+            connection.Open();
+            SqlCommand command = new SqlCommand(query, connection);
+
+            using SqlDataReader reader = command.ExecuteReader();
+            while (reader.Read())
+            {
+                reservedBooks.Add(new Reservation(reader.GetInt32(0), reader.GetInt32(1), reader.GetInt32(2), reader.GetString(3), reader.GetString(4), reader.GetDateTime(5)));
+            }
         }
 
         public void LoadBorrowedBook()
@@ -44,8 +92,8 @@ namespace LibraryManagement.Data
                 lms_patreon p ON c.PatreonId = p.PatreonId
             JOIN 
                 lms_book b ON c.BookId = b.BookId
-            WHERE
-                c.ReturnDate IS NULL;";
+            --WHERE
+            --    c.ReturnDate IS NULL;";
 
             connection.Open();
             SqlCommand command = new SqlCommand(query, connection);
@@ -56,6 +104,66 @@ namespace LibraryManagement.Data
                 borrowedBooks.Add(new BorrowedBook(reader.GetInt32(0),reader.GetInt32(1), reader.GetInt32(2), reader.GetString(3), reader.GetString(4), reader.GetDateTime(5), reader.GetDateTime(6)));
             }
         }
+
+        public async void ReserveBook(Reservation book)
+        {
+            SqlConnection connection = new SqlConnection(connectionString);
+            connection.Open();
+            string query = @"INSERT INTO lms_reservation (BookId, PatreonId, ReservationDate, Status) VALUES (@BookId, @PatreonId, @ReservationDate, @Status);";
+            SqlCommand command = new SqlCommand(query, connection);
+            command.Parameters.AddWithValue("@BookId", book.BookID);
+            command.Parameters.AddWithValue("@PatreonId", book.MemberID);
+            command.Parameters.AddWithValue("@ReservationDate", book.ReservationDate);
+            command.Parameters.AddWithValue("@Status", "On Hold");
+            command.ExecuteNonQuery();
+            await Application.Current.MainPage.DisplayAlert("Success", "Book reserved successfully", "OK");
+        }
+
+        public async void CancelReservation(Reservation book)
+        {
+            SqlConnection connection = new SqlConnection(connectionString);
+            connection.Open();
+            //string query = @"
+            //    UPDATE lms_reservation
+            //    SET Status = 'Cancelled'
+            //    WHERE HoldId = @HoldId;     
+            //    ";
+            string query = @"
+                DELETE FROM lms_reservation
+                WHERE HoldId = @HoldId;     
+                ";
+            SqlCommand command = new SqlCommand(query, connection);
+            command.Parameters.AddWithValue("@HoldId", book.ReservationID);
+            command.ExecuteNonQuery();
+            await Application.Current.MainPage.DisplayAlert("Success", "Reservation cancelled successfully", "OK");
+        }
+
+        public async void RemoveBook(Book book)
+        {
+            var borrowedBook = borrowedBooks.Find(b => b.BookId == book.BookId);
+            var reservedBook = reservedBooks.Find(b => b.BookID == book.BookId);
+            if (borrowedBook != null)
+            {
+                // return "The book is currently checked out and cannot be deleted.";
+                await Application.Current.MainPage.DisplayAlert("Error", "The book currently has a checkout record and cannot be deleted.", "OK");
+                return;
+
+            } else if(reservedBook != null) {
+                await Application.Current.MainPage.DisplayAlert("Error", "The book is currently on hold and cannot be deleted.", "OK");
+                return;
+            }
+            
+
+            SqlConnection connection = new SqlConnection(connectionString);
+            connection.Open();
+            string query = @"DELETE FROM lms_book WHERE BookId = @BookId;";
+            SqlCommand command = new SqlCommand(query, connection);
+            command.Parameters.AddWithValue("@BookId", book.BookId);
+            command.ExecuteNonQuery();
+            await Application.Current.MainPage.DisplayAlert("Success", "Book removed successfully", "OK");
+        }
+
+        
 
         public async void BorrowBook(BorrowedBook book)
         {
@@ -165,7 +273,7 @@ namespace LibraryManagement.Data
             command.Parameters.AddWithValue("@Title", book.Title);
             command.Parameters.AddWithValue("@ISBN", book.Isbn);
             command.Parameters.AddWithValue("@CategoryId", book.CategoryId);
-            command.Parameters.AddWithValue("@Genre", "");
+            command.Parameters.AddWithValue("@Genre", book.Genre);
             command.Parameters.AddWithValue("@PubDate", "");
             command.Parameters.AddWithValue("@Copies", book.Copies);
             command.Parameters.AddWithValue("@AvailableCopies", book.Copies);
@@ -212,17 +320,32 @@ namespace LibraryManagement.Data
 
         public List<Book> GetBooks()
         {
+            LoadBooks();
             return books;
         }
 
         public List<Member> GetMembers()
         {
+            LoadMembers();
             return members;
         }
 
         public List<BorrowedBook> GetBorrowedBooks()
         {
+            LoadBorrowedBook();
             return borrowedBooks;
+        }
+
+        public List<Reservation> GetReservedBooks()
+        {
+            LoadReservedBook();
+            return reservedBooks;
+        }
+
+        public List<string> GetCategories()
+        {
+            LoadCategories();
+            return categories;
         }
     }
 }

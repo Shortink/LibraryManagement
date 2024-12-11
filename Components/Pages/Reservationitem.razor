@@ -1,4 +1,5 @@
 ﻿@page "/Reservation"
+@using LibraryManagement.Data
 
 <div class="container">
     <div class="header">
@@ -6,49 +7,23 @@
         <p>Manage book reservations and library members efficiently.</p>
     </div>
 
-    <!-- Add Member Section -->
-    <div class="card card-cream">
-        <h2>Add a Member</h2>
-        <form>
-            <input type="text" placeholder="Enter Member Name" @bind="NewMemberName" />
-            <button type="button" class="btn btn-primary" @onclick="AddMember">Add Member</button>
-        </form>
-    </div>
-
-    <!-- Add Book Section -->
-    <div class="card card-cream">
-        <h2>Add a Book</h2>
-        <form>
-            <div class="form-group">
-                <input type="text" placeholder="Enter Book Title" @bind="NewBookTitle" />
-            </div>
-            <div class="form-group">
-                <input type="text" placeholder="Enter Author Name" @bind="NewBookAuthor" />
-            </div>
-            <div class="form-group">
-                <input type="text" placeholder="Enter ISBN" @bind="NewBookISBN" />
-            </div>
-            <button type="button" class="btn btn-primary" @onclick="AddBook">Add Book</button>
-        </form>
-    </div>
-
     <!-- Reservation Form Section -->
     <div class="card card-cream">
         <h2>Reserve a Book</h2>
         <form>
-            <select @bind="SelectedMemberId">
+            <select @bind="selectedMemberId">
                 <option value="">-- Select Member --</option>
-                @foreach (var member in Members)
+                @foreach (Member member in members)
                 {
-                    <option value="@member.Id">@member.Name</option>
+                    <option value="@member.MemberID">@member.FirstName @member.LastName</option>
                 }
             </select>
 
-            <select @bind="SelectedBookId">
+            <select @bind="selectedBookId">
                 <option value="">-- Select Book --</option>
-                @foreach (var book in Books)
+                @foreach (Book book in books)
                 {
-                    <option value="@book.Id">@book.Title</option>
+                    <option value="@book.BookId">@book.Title</option>
                 }
             </select>
 
@@ -62,13 +37,13 @@
     <div class="card card-cream">
         <h2>Current Reservations</h2>
         <ul>
-            @if (Reservations.Any())
+            @if (reservations.Any())
             {
-                @foreach (var reservation in Reservations)
+                @foreach (Reservation reservation in reservations)
                 {
                     <li>
-                        <span>@reservation.MemberName reserved "<strong>@reservation.BookTitle</strong>" (Date: @reservation.ReservationDate.ToShortDateString())</span>
-                        <button type="button" class="btn btn-danger" @onclick="() => CancelReservation(reservation.Id)">Cancel</button>
+                        <span>@reservation.MemberName reserved "<strong>@reservation.BookName</strong>" (Date: @reservation.ReservationDate.ToShortDateString())</span>
+                        <button type="button" class="btn btn-danger" @onclick="() => CancelReservation(reservation.ReservationID)">Cancel</button>
                     </li>
                 }
             }
@@ -81,87 +56,39 @@
 </div>
 
 @code {
-    private List<Member> Members { get; set; } = new();
-    private List<Book> Books { get; set; } = new();
-    private List<Reservation> Reservations { get; set; } = new();
+    static DbManager db = new DbManager();
+    List<Member> members = db.GetMembers();
+    List<Book> books = db.GetBooks();
+    List<Reservation> reservations = db.GetReservedBooks();
 
-    private string NewMemberName { get; set; } = string.Empty;
-    private string NewBookTitle { get; set; } = string.Empty;
-    private string NewBookAuthor { get; set; } = string.Empty;
-    private string NewBookISBN { get; set; } = string.Empty;
-    private string SelectedMemberId { get; set; } = string.Empty;
-    private string SelectedBookId { get; set; } = string.Empty;
+    int selectedMemberId;
+    int selectedBookId;
+
     private DateTime ReservationDate { get; set; } = DateTime.Now;
-
-    private void AddMember()
-    {
-        if (!string.IsNullOrWhiteSpace(NewMemberName))
-        {
-            Members.Add(new Member { Id = Guid.NewGuid().ToString(), Name = NewMemberName.Trim() });
-            NewMemberName = string.Empty;
-        }
-    }
-
-    private void AddBook()
-    {
-        if (!string.IsNullOrWhiteSpace(NewBookTitle) && !string.IsNullOrWhiteSpace(NewBookAuthor) && !string.IsNullOrWhiteSpace(NewBookISBN))
-        {
-            Books.Add(new Book { Id = Guid.NewGuid().ToString(), Title = NewBookTitle.Trim(), Author = NewBookAuthor.Trim(), ISBN = NewBookISBN.Trim() });
-            NewBookTitle = string.Empty;
-            NewBookAuthor = string.Empty;
-            NewBookISBN = string.Empty;
-        }
-    }
 
     private void ReserveBook()
     {
-        if (!string.IsNullOrWhiteSpace(SelectedMemberId) && !string.IsNullOrWhiteSpace(SelectedBookId))
+        Member member = members.FirstOrDefault(m => m.MemberID == selectedMemberId);
+        Book book = books.FirstOrDefault(b => b.BookId == selectedBookId);
+        if (member != null && book != null)
         {
-            var member = Members.FirstOrDefault(m => m.Id == SelectedMemberId);
-            var book = Books.FirstOrDefault(b => b.Id == SelectedBookId);
-            if (member != null && book != null)
-            {
-                Reservations.Add(new Reservation
-                    {
-                        Id = Guid.NewGuid().ToString(),
-                        MemberName = member.Name,
-                        BookTitle = book.Title,
-                        ReservationDate = ReservationDate
-                    });
-            }
+            Reservation reservedBook = new Reservation(selectedBookId, selectedMemberId, ReservationDate);
+            db.ReserveBook(reservedBook);
+            reservations = db.GetReservedBooks();
         }
     }
 
-    private void CancelReservation(string reservationId)
+    private void CancelReservation(int reservationId)
     {
-        var reservation = Reservations.FirstOrDefault(r => r.Id == reservationId);
+        Reservation reservation = reservations.FirstOrDefault(r => r.ReservationID == reservationId);
         if (reservation != null)
         {
-            Reservations.Remove(reservation);
+            db.CancelReservation(reservation);
+            reservations = db.GetReservedBooks();
         }
     }
 
-    private class Member
-    {
-        public string Id { get; set; }
-        public string Name { get; set; }
-    }
 
-    private class Book
-    {
-        public string Id { get; set; }
-        public string Title { get; set; }
-        public string Author { get; set; }
-        public string ISBN { get; set; }
-    }
-
-    private class Reservation
-    {
-        public string Id { get; set; }
-        public string MemberName { get; set; }
-        public string BookTitle { get; set; }
-        public DateTime ReservationDate { get; set; }
-    }
 }
 
 <style>

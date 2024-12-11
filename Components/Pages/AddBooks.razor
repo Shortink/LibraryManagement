@@ -23,10 +23,22 @@
                 <label for="author">Author:</label>
                 <input id="author" @bind="newBook.AuthorName" />
             </div>
+            
             <div class="form-group">
-                <label for="category">CategoryId(placeholder):</label>
-                <input id="category" @bind="newBook.CategoryId" />
+                <label>Category:</label>
+                <select @bind="newBook.CategoryId">
+                    @foreach (string category in categories)
+                    {
+                        <option value="@category.Split(':')[0]">@category.Split(':')[1]</option>
+                    }
+                    
+                </select>
             </div>
+            <div class="form-group">
+                <label for="genre">Genre:</label>
+                <input id="genre" @bind="newBook.Genre" />
+            </div>
+
             <div class="form-group">
                 <label for="price">Copies:</label>
                 <input id="price" type="number" @bind="newBook.Copies" />
@@ -72,6 +84,8 @@
     static DbManager db = new DbManager();
     Book newBook = new Book();
     List<Book> books = db.GetBooks();
+    List<string> categories = db.GetCategories();
+    List<BorrowedBook> borrowedBooks = db.GetBorrowedBooks();
 
     void AddBook()
     {
@@ -85,10 +99,12 @@
 
     void DeleteBook(int id)
     {
-        var bookToDelete = books.Find(b => b.BookId == id);
+        Book bookToDelete = books.Find(b => b.BookId == id);
         if (bookToDelete != null)
         {
-            books.Remove(bookToDelete);
+            db.RemoveBook(bookToDelete);
+            books = db.GetBooks();
+            // books.Remove(bookToDelete);
         }
     }
 }
@@ -238,5 +254,20 @@
     tbody td {
         color: #2c3e50;
     }
+
+    input, select {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        background-color: #ffffff;
+        color: #000000;
+    }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 6px rgba(52, 152, 219, 0.6);
+        }
 </style>
 
