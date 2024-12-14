@@ -68,13 +68,15 @@
 
     private void ReserveBook()
     {
+        //finds selected member and book with the selected ids
         Member member = members.FirstOrDefault(m => m.MemberID == selectedMemberId);
         Book book = books.FirstOrDefault(b => b.BookId == selectedBookId);
+        //member and book should always be found but if for some reason they arent the function returns
         if (member != null && book != null)
         {
             Reservation reservedBook = new Reservation(selectedBookId, selectedMemberId, ReservationDate);
-            db.ReserveBook(reservedBook);
-            reservations = db.GetReservedBooks();
+            db.ReserveBook(reservedBook); //calls the reserve book function in the db manager
+            reservations = db.GetReservedBooks(); //updates the reservations list with latest records from database
         }
     }
 
@@ -83,8 +85,8 @@
         Reservation reservation = reservations.FirstOrDefault(r => r.ReservationID == reservationId);
         if (reservation != null)
         {
-            db.CancelReservation(reservation);
-            reservations = db.GetReservedBooks();
+            db.CancelReservation(reservation); //calls the cancel reservation function in the db manager
+            reservations = db.GetReservedBooks(); //updates the reservations list with latest records from database
         }
     }
 

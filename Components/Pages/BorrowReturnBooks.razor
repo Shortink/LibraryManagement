@@ -103,7 +103,7 @@
     {
         Member member = members.FirstOrDefault(m => m.MemberID == selectedMemberId);
         Book book = books.FirstOrDefault(b => b.BookId == selectedBookId);
-
+        //member and book should never be null but if for some reason they are the function returns
         if (member != null && book != null)
         {
             BorrowedBook borrowedBook = new BorrowedBook(selectedBookId, selectedMemberId, BorrowDate, DueDate);
