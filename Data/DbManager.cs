@@ -1,4 +1,5 @@
-﻿using Microsoft.Data.SqlClient;
+﻿//Main database class that is responsible for all database queries and operations
+using Microsoft.Data.SqlClient;
 using Microsoft.Maui.Controls;
 using Microsoft.VisualBasic;
 using System;
@@ -15,12 +16,14 @@ namespace LibraryManagement.Data
     public class DbManager
     {
         string connectionString = @"Data Source=(localdb)\MSSQLLocalDB;Initial Catalog=Library;Integrated Security=True";
+        //string connectionString = @"data source=DESKTOP-450AHJT\LOCALDB#F7F10ADA;initial catalog=Library;trusted_connection=true";
         static List<Book> books = new();
         static List<Member> members = new();
         static List<BorrowedBook> borrowedBooks = new();
         static List<BorrowedBook> borrowedBooksRecord = new();
         static List<Reservation> reservedBooks = new();
         List<string> categories = new List<string> { "Fiction", "Non-Fiction", "Science Fiction", "Mystery", "Romance", "Thriller", "Horror", "Biography", "Fantasy", "Self-Help" };
+        List<string> admins = new();
         public DbManager() 
         {
             LoadBooks();
@@ -30,8 +33,10 @@ namespace LibraryManagement.Data
 
         }
 
+        //Load all book categories from the database and store them in the categories list
         public void LoadCategories()
         {
+            //clear the list before loading new data to prevent duplicates
             categories.Clear();
             SqlConnection connection = new SqlConnection(connectionString);
             string query = @"SELECT * FROM lms_category;";
@@ -41,14 +46,15 @@ namespace LibraryManagement.Data
             using SqlDataReader reader = command.ExecuteReader();
             while (reader.Read())
             {
-                string data = $"{reader.GetInt32(0)}:{reader.GetString(1)}";
+                string data = $"{reader.GetInt32(0)}:{reader.GetString(1)}";  //stores category id and name in the format "id:name"
                 categories.Add(data);
             }
         }
 
+        //Load all reserved books from the database and store them in the reservedBooks list. 
         public void LoadReservedBook()
         {
-            reservedBooks.Clear();
+            reservedBooks.Clear(); //clear the list before loading new data to prevent duplicates
             SqlConnection connection = new SqlConnection(connectionString);
             string query = @"
             SELECT 
@@ -71,13 +77,16 @@ namespace LibraryManagement.Data
             using SqlDataReader reader = command.ExecuteReader();
             while (reader.Read())
             {
+                //add a new reservation object to the reservedBooks list for every record retrieved from the database
                 reservedBooks.Add(new Reservation(reader.GetInt32(0), reader.GetInt32(1), reader.GetInt32(2), reader.GetString(3), reader.GetString(4), reader.GetDateTime(5)));
             }
         }
 
+        //Load all borrowed books from the database and store them in the borrowedBooks list.
         public void LoadBorrowedBooksRecord()
         {
-            borrowedBooks.Clear();
+            //clear the list before loading new data to prevent duplicates
+            borrowedBooks.Clear(); 
             SqlConnection connection = new SqlConnection(connectionString);
             string query = @"
             SELECT 
@@ -103,12 +112,15 @@ namespace LibraryManagement.Data
             using SqlDataReader reader = command.ExecuteReader();
             while (reader.Read())
             {
+                //add a new borrowed book object to the borrowedBooks list for every record retrieved from the database
                 borrowedBooksRecord.Add(new BorrowedBook(reader.GetInt32(0),reader.GetInt32(1), reader.GetInt32(2), reader.GetString(3), reader.GetString(4), reader.GetDateTime(5), reader.GetDateTime(6)));
             }
         }
 
+        //Load all borrowed books from the database and store them in the borrowedBooks list.
         public void LoadBorrowedBook()
         {
+            //clear the list before loading new data to prevent duplicates
             borrowedBooks.Clear();
             SqlConnection connection = new SqlConnection(connectionString);
             string query = @"
@@ -132,13 +144,16 @@ namespace LibraryManagement.Data
             connection.Open();
             SqlCommand command = new SqlCommand(query, connection);
 
+            //read a record at a time
             using SqlDataReader reader = command.ExecuteReader();
             while (reader.Read())
             {
+                //add a new borrowed book object to the borrowedBooks list for every record retrieved from the database
                 borrowedBooks.Add(new BorrowedBook(reader.GetInt32(0), reader.GetInt32(1), reader.GetInt32(2), reader.GetString(3), reader.GetString(4), reader.GetDateTime(5), reader.GetDateTime(6)));
             }
         }
 
+        //Reserve a book by adding a new record to the lms_reservation table in the database
         public async void ReserveBook(Reservation book)
         {
             SqlConnection connection = new SqlConnection(connectionString);
@@ -153,6 +168,7 @@ namespace LibraryManagement.Data
             await Application.Current.MainPage.DisplayAlert("Success", "Book reserved successfully", "OK");
         }
 
+        //Cancel a book reservation by deleting the reservation record in the database
         public async void CancelReservation(Reservation book)
         {
             SqlConnection connection = new SqlConnection(connectionString);
@@ -172,11 +188,15 @@ namespace LibraryManagement.Data
             await Application.Current.MainPage.DisplayAlert("Success", "Reservation cancelled successfully", "OK");
         }
 
+        //Remove a book from the database
         public async void RemoveBook(Book book)
         {
+            //check if the book is currently checked out or reserved before deleting it
             LoadBorrowedBooksRecord();
+            //loads the borrowed books record to see if the book id to be removed matches with any id in the borrowed books record
             var borrowedBook = borrowedBooksRecord.Find(b => b.BookId == book.BookId);
             var reservedBook = reservedBooks.Find(b => b.BookID == book.BookId);
+            //returns error message if the book exists in the borrowed or reserved books record
             if (borrowedBook != null)
             {
                 // return "The book is currently checked out and cannot be deleted.";
@@ -187,8 +207,8 @@ namespace LibraryManagement.Data
                 await Application.Current.MainPage.DisplayAlert("Error", "The book is currently on hold and cannot be deleted.", "OK");
                 return;
             }
-            
 
+            //runs the query if the book is not checked out or reserved
             SqlConnection connection = new SqlConnection(connectionString);
             connection.Open();
             string query = @"DELETE FROM lms_book WHERE BookId = @BookId;";
@@ -198,8 +218,8 @@ namespace LibraryManagement.Data
             await Application.Current.MainPage.DisplayAlert("Success", "Book removed successfully", "OK");
         }
 
-        
 
+        //makes a new checkout record in the database when a book is borrowed
         public async void BorrowBook(BorrowedBook book)
         {
             SqlConnection connection = new SqlConnection(connectionString);
@@ -214,6 +234,7 @@ namespace LibraryManagement.Data
             await Application.Current.MainPage.DisplayAlert("Success", "Book borrowed successfully", "OK");
         }
 
+        //returns a book by updating the return date in the lms_checkout table
         public async void ReturnBook(BorrowedBook book)
         {
             SqlConnection connection = new SqlConnection(connectionString);
@@ -231,9 +252,10 @@ namespace LibraryManagement.Data
             await Application.Current.MainPage.DisplayAlert("Success", "Book returned successfully", "OK");
         }
 
-        
+        //Add a new member to the database
         public void LoadMembers()
         {
+            //clear the list before loading new data to prevent duplicates
             members.Clear();
             SqlConnection connection = new SqlConnection(connectionString);
             string query = @"SELECT * FROM lms_patreon;";
@@ -243,15 +265,17 @@ namespace LibraryManagement.Data
             using SqlDataReader reader = command.ExecuteReader();
             while (reader.Read())
             {
+                //add a new member object to the members list for every record retrieved from the database
                 members.Add(new Member(reader.GetInt32(0), reader.GetString(1), reader.GetString(2)));
             }
         }
 
+        //Add a new member to the database
         public async void AddNewMember(Member member)
         {
             SqlConnection connection = new SqlConnection(connectionString);
             connection.Open();
-
+            //insert new member record into the lms_patreon table
             string insertMemberQuery = @"INSERT INTO lms_patreon (FirstName, LastName) VALUES (@FirstName, @LastName);";
             SqlCommand command = new SqlCommand(insertMemberQuery, connection);
             command.Parameters.AddWithValue("@FirstName", member.FirstName);
@@ -259,10 +283,52 @@ namespace LibraryManagement.Data
             command.ExecuteNonQuery();
             await Application.Current.MainPage.DisplayAlert("Success", "Member added successfully", "OK");
         }
+
+        //Load all admin names from the database and store them in the admins list
+        public void LoadAdmin()
+        {
+            admins.Clear();
+            SqlConnection connection = new SqlConnection(connectionString);
+            string query = @"SELECT * FROM lms_admin;";
+            connection.Open();
+            SqlCommand command = new SqlCommand(query, connection);
+
+            using SqlDataReader reader = command.ExecuteReader();
+            while (reader.Read())
+            {
+                admins.Add(reader.GetString(1));
+            }
+        }
+
+        public async void AddNewAdmin(string name)
+        {
+            SqlConnection connection = new SqlConnection(connectionString);
+            connection.Open();
+
+            string insertMemberQuery = @"INSERT INTO lms_admin (Name) VALUES (@Name);";
+            SqlCommand command = new SqlCommand(insertMemberQuery, connection);
+            command.Parameters.AddWithValue("@Name", name);
+            command.ExecuteNonQuery();
+            await Application.Current.MainPage.DisplayAlert("Success", "Admin added successfully", "OK");
+        }
+
+        public async void RemoveAdmin(string name)
+        {
+            SqlConnection connection = new SqlConnection(connectionString);
+            connection.Open();
+            string query = @"DELETE FROM lms_admin WHERE Name = @Name;";
+            SqlCommand command = new SqlCommand(query, connection);
+            command.Parameters.AddWithValue("@Name", name);
+            command.ExecuteNonQuery();
+            await Application.Current.MainPage.DisplayAlert("Success", "Admin removed successfully", "OK");
+        }
+
+        //Load all books from the database and store them in the books list
         public void LoadBooks()
         {
             books.Clear();
             SqlConnection connection = new SqlConnection(connectionString);
+            //uses a join query to retrieve book details along with the author name and category name for easy access
             string query = @"
             SELECT 
                 b.BookId,
@@ -290,6 +356,7 @@ namespace LibraryManagement.Data
             }
         }
 
+        //Add a new book to the database
         public async void AddNewBook(Book book)
         {
             string firstName = book.AuthorName.Split(' ')[0];
@@ -297,6 +364,7 @@ namespace LibraryManagement.Data
             SqlConnection connection = new SqlConnection(connectionString);
             connection.Open();
 
+            //calls function to retrieve author id from the database if it already exixts, otherwise it adds a new author record
             int authorId = GetAuthor(connection, firstName, lastName);
 
             string insertBookQuery = @"
@@ -381,6 +449,12 @@ namespace LibraryManagement.Data
         {
             LoadCategories();
             return categories;
+        }
+
+        public List<string> GetAdmin()
+        {
+            LoadAdmin();
+            return admins;
         }
     }
 }

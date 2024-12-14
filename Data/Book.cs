@@ -1,4 +1,5 @@
-﻿using System;
+﻿//Book class for managing book details
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;

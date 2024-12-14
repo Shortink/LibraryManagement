@@ -1,4 +1,5 @@
-﻿using System;
+﻿//Reservation class to store details about a book reservation
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;

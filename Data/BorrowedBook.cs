@@ -1,4 +1,5 @@
-﻿using System;
+﻿//class to represent a borrowed book and store all its checkout details
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;

@@ -1,4 +1,5 @@
 ﻿@page "/Setting"
+@using LibraryManagement.Data
 
 <div class="container">
     <div class="header">
@@ -57,13 +58,16 @@
 </div>
 
 @code {
+    static DbManager db = new DbManager();
     private string LibraryName { get; set; } = "My Library";
     private string LibraryAddress { get; set; } = "123 Library Street, Booktown";
-    private List<string> Admins { get; set; } = new List<string> { "Admin1", "Admin2" };
+    // private List<string> Admins { get; set; } = new List<string> { "Admin1", "Admin2" };
+    List<string> Admins = db.GetAdmin();
     private string NewAdminName { get; set; } = string.Empty;
     private int MaxBooksPerMember { get; set; } = 5;
     private double FinePerDay { get; set; } = 1.0;
 
+    
     private void UpdateLibraryDetails()
     {
         Console.WriteLine($"Library Name: {LibraryName}, Address: {LibraryAddress}");
@@ -73,14 +77,18 @@
     {
         if (!string.IsNullOrWhiteSpace(NewAdminName))
         {
-            Admins.Add(NewAdminName);
+            // Admins.Add(NewAdminName);
+            db.AddNewAdmin(NewAdminName);
+            Admins = db.GetAdmin();
             NewAdminName = string.Empty;
         }
     }
 
     private void RemoveAdmin(string admin)
     {
-        Admins.Remove(admin);
+        // Admins.Remove(admin);
+        db.RemoveAdmin(admin);
+        Admins = db.GetAdmin();
     }
 
     private void UpdateBorrowingRules()

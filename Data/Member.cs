@@ -1,4 +1,5 @@
-﻿using System;
+﻿// Purpose: Contains the Member class which represents a member of the library.
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
