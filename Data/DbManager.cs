@@ -30,7 +30,6 @@ namespace LibraryManagement.Data
             LoadMembers();
             LoadBorrowedBook();
             LoadReservedBook();
-
         }
 
         //Load all book categories from the database and store them in the categories list
